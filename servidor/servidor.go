@@ -39,7 +39,8 @@ func CreateUSer(w http.ResponseWriter, r *http.Request) {
 
 	db, err := db.Connection().DB()
 	if err != nil {
-		log.Panic("deu ruim no banco irmao")
+		log.Panic("not connected")
+		fmt.Println(err.Error())
 	}
 
 	defer db.Close()
@@ -50,13 +51,13 @@ func CreateUSer(w http.ResponseWriter, r *http.Request) {
 	err = db.QueryRow(query, user.Nome, user.Email).Scan(&userID)
 	// idInsercao, err := insercao.LastInsertId()
 	if err != nil {
-		fmt.Println(err)
-		w.Write([]byte("errooooooooo filho da putaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+		fmt.Println(err.Error())
+		w.Write([]byte("Error on creating user"))
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fmt.Sprintf("user com id %d", userID)))
+	w.Write([]byte(fmt.Sprintf("user with id %d", userID)))
 }
 
 func FindUser(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +73,8 @@ func FindUser(w http.ResponseWriter, r *http.Request) {
 
 	db, err := db.Connection().DB()
 	if err != nil {
-		log.Panic("deu ruim no banco irmao")
+		log.Panic("not connected")
+		fmt.Println(err.Error())
 	}
 
 	defer db.Close()
@@ -101,7 +103,8 @@ func FindUser(w http.ResponseWriter, r *http.Request) {
 func FindAllUsers(w http.ResponseWriter, r *http.Request) {
 	db, err := db.Connection().DB()
 	if err != nil {
-		log.Panic("deu ruim no banco irmao")
+		log.Panic("not connected")
+		fmt.Println(err.Error())
 	}
 
 	defer db.Close()
@@ -152,7 +155,8 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	db, err := db.Connection().DB()
 	if err != nil {
-		log.Panic("deu ruim no banco irmao")
+		log.Panic("not connected")
+		fmt.Println(err.Error())
 	}
 
 	defer db.Close()
@@ -161,11 +165,9 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	_, err = db.Exec(query, UpdateUser.Nome, UpdateUser.Email, UpdateUser.ID) // Substitua "novoValor" e "id" pelos valores corretos
 
 	if err != nil {
-		// Trate o erro de atualização
 		fmt.Println(err.Error())
 	} else {
-		// A atualização foi bem-sucedida
-		fmt.Println("atualizou ")
+		fmt.Println("Updated user")
 	}
 
 	response, err := json.Marshal(UpdateUser)
@@ -188,13 +190,15 @@ func DeletarUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(param["id"], 10, 32)
 
 	if err != nil {
-		fmt.Println("deu erro na conversao")
+		fmt.Println("not possible to convert")
 	}
 
 	db, err := db.Connection().DB()
 
 	if err != nil {
-		log.Panic("banco nao esta possivel de logar")
+		log.Panic("not connected")
+		fmt.Println(err.Error())
+
 	}
 
 	defer db.Close()
