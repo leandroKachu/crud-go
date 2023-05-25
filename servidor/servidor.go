@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type usuario struct {
+type user struct {
 	ID    int    `json:"id"`
 	Nome  string `json:"nome"`
 	Email string `json:"email"`
@@ -23,7 +23,7 @@ var data struct {
 	ID int `json:"id"`
 }
 
-func CriarUsuario(w http.ResponseWriter, r *http.Request) {
+func CreateUSer(w http.ResponseWriter, r *http.Request) {
 	//ioutil.ReadAll(r.body) vai ler o que esta dentro do body, no caso um objeto json com  meus valores
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -31,8 +31,8 @@ func CriarUsuario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var usuario usuario
-	if err := json.Unmarshal(body, &usuario); err != nil {
+	var user user
+	if err := json.Unmarshal(body, &user); err != nil {
 		w.Write([]byte("erro ao conectar"))
 		return
 	}
@@ -44,26 +44,11 @@ func CriarUsuario(w http.ResponseWriter, r *http.Request) {
 
 	defer db.Close()
 
-	statement, err := db.Prepare("INSERT INTO usuarios (nome, email) VALUES ($1, $2) RETURNING id;")
-	if err != nil {
-		w.Write([]byte("erro ao conectar ao statement"))
-		fmt.Println(statement)
-		fmt.Println(err)
-		return
-	}
-	defer statement.Close()
+	query := "INSERT INTO usuarios (nome, email) VALUES ($1, $2) RETURNING id"
+	var userID int
 
-	insercao, err := statement.Exec(usuario.Nome, usuario.Email)
-
-	fmt.Println(insercao)
-	if err != nil {
-		w.Write([]byte("erro ao executar ao statement"))
-		return
-	}
-
+	err = db.QueryRow(query, user.Nome, user.Email).Scan(&userID)
 	// idInsercao, err := insercao.LastInsertId()
-	var idInsercao int
-	err = statement.QueryRow(usuario.Nome, usuario.Email).Scan(&idInsercao)
 	if err != nil {
 		fmt.Println(err)
 		w.Write([]byte("errooooooooo filho da putaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
@@ -71,10 +56,10 @@ func CriarUsuario(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fmt.Sprintf("usuario com id %d", idInsercao)))
+	w.Write([]byte(fmt.Sprintf("user com id %d", userID)))
 }
 
-func BuscarUsuario(w http.ResponseWriter, r *http.Request) {
+func FindUser(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(&data)
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -91,15 +76,15 @@ func BuscarUsuario(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer db.Close()
-	var usuario usuario
+	var user user
 
-	err = db.QueryRow("SELECT id, nome, email FROM usuarios WHERE id = $1", data.ID).Scan(&usuario.ID, &usuario.Nome, &usuario.Email)
+	err = db.QueryRow("SELECT id, nome, email FROM usuarios WHERE id = $1", data.ID).Scan(&user.ID, &user.Nome, &user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	response, err := json.Marshal(usuario)
+	response, err := json.Marshal(user)
 	responseString := string(response)
 	fmt.Println(responseString)
 
@@ -113,7 +98,7 @@ func BuscarUsuario(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func BuscarUsuarios(w http.ResponseWriter, r *http.Request) {
+func FindAllUsers(w http.ResponseWriter, r *http.Request) {
 	db, err := db.Connection().DB()
 	if err != nil {
 		log.Panic("deu ruim no banco irmao")
@@ -126,22 +111,22 @@ func BuscarUsuarios(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	defer rows.Close()
-	usuarios := []usuario{}
+	users := []user{}
 
 	for rows.Next() {
-		var usuario usuario
-		err := rows.Scan(&usuario.ID, &usuario.Nome, &usuario.Email)
+		var user user
+		err := rows.Scan(&user.ID, &user.Nome, &user.Email)
 		if err != nil {
 			log.Fatal(err)
 		}
-		usuarios = append(usuarios, usuario)
+		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
 
 	// Converta a lista de usuários para JSON
-	response, err := json.Marshal(usuarios)
+	response, err := json.Marshal(users)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,15 +135,15 @@ func BuscarUsuarios(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func AtualizarUser(w http.ResponseWriter, r *http.Request) {
-	var user struct {
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	var UpdateUser struct {
 		ID    int    `json:"id"`
 		Nome  string `json:"nome"`
 		Email string `json:"email"`
 	}
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err := json.NewDecoder(r.Body).Decode(&UpdateUser)
 
-	fmt.Println(reflect.TypeOf(user)) // int
+	fmt.Println(reflect.TypeOf(UpdateUser)) // int
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -173,7 +158,7 @@ func AtualizarUser(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	query := "UPDATE usuarios SET nome = $1, email = $2 WHERE id = $3"
-	_, err = db.Exec(query, user.Nome, user.Email, user.ID) // Substitua "novoValor" e "id" pelos valores corretos
+	_, err = db.Exec(query, UpdateUser.Nome, UpdateUser.Email, UpdateUser.ID) // Substitua "novoValor" e "id" pelos valores corretos
 
 	if err != nil {
 		// Trate o erro de atualização
@@ -183,7 +168,7 @@ func AtualizarUser(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("atualizou ")
 	}
 
-	response, err := json.Marshal(user)
+	response, err := json.Marshal(UpdateUser)
 	responseString := string(response)
 	fmt.Println(responseString)
 
